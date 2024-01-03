@@ -61,6 +61,10 @@ export async function POST(req: Request) {
       session.subscription as string
     );
 
+    if (!session?.metadata?.userId) {
+      return new NextResponse("no userid", { status: 400 });
+    }
+
     console.log("updating sub!!!!")
     // await db
     //   .update(userSubscriptions)

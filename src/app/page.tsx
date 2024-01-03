@@ -1,9 +1,13 @@
 import PricesList from '@/components/PricesList'
+import SubOrBilling from '@/components/SubOrBilling'
 import { Button } from '@/components/ui/button'
+import { checkSubscription } from '@/lib/subscription'
 import { SignInButton, SignedIn, SignedOut, UserButton } from '@clerk/nextjs'
 import Image from 'next/image'
 
-export default function Home() {
+export default async function Home() {
+  const isSEOSTAR = await checkSubscription()
+
   return (
     <main className="">
       <div className="prices">
