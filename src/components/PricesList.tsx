@@ -6,8 +6,6 @@ export default async function PricesList() {
     // const prices = await stripe.prices.list();
     const products = await (await stripe.products.list()).data?.filter(prod => prod.active)
 
-    console.log(products)
-
     return <div className="">
         {products?.map(product => <Product key={product.id} product={product} />)}
     </div>

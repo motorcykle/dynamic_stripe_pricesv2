@@ -30,6 +30,7 @@ export async function POST(req: Request) {
     if (!session?.metadata?.userId) {
       return new NextResponse("no userid", { status: 400 });
     }
+    console.log(subscription)
     await db.insert(userSubscriptions).values({
       userId: session.metadata.userId,
       stripeSubscriptionId: subscription.id,
@@ -57,24 +58,32 @@ export async function POST(req: Request) {
   // customer.subscription.updated
 
   if (event.type === "customer.subscription.updated") {
-    const subscription = await stripe.subscriptions.retrieve(
-      session.subscription as string
-    );
+    console.log("****")
+    console.log(event.data.object.metadata, event.data.object?.plan, event.data.object.current_period_end)
+    console.log("****")
 
-    if (!session?.metadata?.userId) {
+    const subscriptionId = event.data.object.id
+    const metadata = event.data.object.metadata
+    const stripePriceId = event.data.object?.plan?.id
+    const current_period_end = event.data.object.current_period_end
+    // const subscription = await stripe.subscriptions.retrieve(
+    //   session.subscription as string
+    // );
+
+    if (!metadata?.userId) {
       return new NextResponse("no userid", { status: 400 });
     }
 
     console.log("updating sub!!!!")
-    // await db
-    //   .update(userSubscriptions)
-    //   .set({
-    //     stripePriceId: subscription.items.data[0].price.id,
-    //     stripeCurrentPeriodEnd: new Date(
-    //       subscription.current_period_end * 1000
-    //     ),
-    //   })
-    //   .where(eq(userSubscriptions.stripeSubscriptionId, subscription.id));
+    await db
+      .update(userSubscriptions)
+      .set({
+        stripePriceId,
+        stripeCurrentPeriodEnd: new Date(
+          current_period_end * 1000
+        ),
+      })
+      .where(eq(userSubscriptions.stripeSubscriptionId, subscriptionId));
   }
 
   return new NextResponse(null, { status: 200 });

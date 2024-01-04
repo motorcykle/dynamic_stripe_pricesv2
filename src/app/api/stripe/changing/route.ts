@@ -7,12 +7,15 @@ import { NextResponse } from "next/server";
 
 const return_url = process.env.NEXT_BASE_URL + "/";
 
-export async function GET() {
+export async function POST(request: Request) {
+  
   try {
+    const data = await request.json();
+    console.log(data)
     const { userId } = await auth();
     const user = await currentUser();
 
-    if (!userId) {
+    if (!userId || !data?.priceId) {
       return new NextResponse("unauthorized", { status: 401 });
     }
 
@@ -20,7 +23,7 @@ export async function GET() {
       .select()
       .from(userSubscriptions)
       .where(eq(userSubscriptions.userId, userId));
-    if (_userSubscriptions[0] && _userSubscriptions[0].stripeCustomerId) {
+    if (_userSubscriptions[0].stripePriceId == data?.priceId) {
       // trying to cancel at the billing portal
       const stripeSession = await stripe.billingPortal.sessions.create({
         customer: _userSubscriptions[0].stripeCustomerId,
@@ -29,35 +32,36 @@ export async function GET() {
       return NextResponse.json({ url: stripeSession.url });
     }
 
-    // user's first time trying to subscribe
-    const stripeSession = await stripe.checkout.sessions.create({
-      success_url: return_url,
-      cancel_url: return_url,
-      payment_method_types: ["card"],
-      mode: "subscription",
-      billing_address_collection: "auto",
-      customer_email: user?.emailAddresses[0].emailAddress,
-      line_items: [
-        {
-          price_data: {
-            currency: "USD",
-            product_data: {
-              name: "SEOSTAR",
-              description: "Unlimited SEO checks!",
-            },
-            unit_amount: 5000,
-            recurring: {
-              interval: "month",
-            },
+    
+    const subscriptionItems = await stripe.subscriptionItems.list({
+      limit: 3,
+      subscription: _userSubscriptions?.[0].stripeSubscriptionId!,
+    });
+
+    console.log(subscriptionItems.data[0].id)
+
+    
+    const subscription = await stripe.subscriptions.update(
+      _userSubscriptions?.[0].stripeSubscriptionId!,
+      {
+        items: [
+          {
+            id: subscriptionItems.data[0].id,
+            price: data?.priceId,
           },
-          quantity: 1,
-        },
-      ],
-      metadata: {
-        userId,
-      },
+        ],
+        metadata: {
+          userId,
+        }
+      }
+    );
+
+    const stripeSession = await stripe.billingPortal.sessions.create({
+      customer: _userSubscriptions[0].stripeCustomerId,
+      return_url,
     });
     return NextResponse.json({ url: stripeSession.url });
+    
   } catch (error) {
     console.log("stripe error", error);
     return new NextResponse("internal server error", { status: 500 });

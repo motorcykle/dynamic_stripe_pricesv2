@@ -7,12 +7,15 @@ import { NextResponse } from "next/server";
 
 const return_url = process.env.NEXT_BASE_URL + "/";
 
-export async function GET() {
+export async function POST(request: Request) {
+  
   try {
+    const data = await request.json();
+    console.log(data)
     const { userId } = await auth();
     const user = await currentUser();
 
-    if (!userId) {
+    if (!userId || !data?.priceId) {
       return new NextResponse("unauthorized", { status: 401 });
     }
 
@@ -38,21 +41,11 @@ export async function GET() {
       billing_address_collection: "auto",
       customer_email: user?.emailAddresses[0].emailAddress,
       line_items: [
-        {
-          price_data: {
-            currency: "USD",
-            product_data: {
-              name: "SEOSTAR",
-              description: "Unlimited SEO checks!",
-            },
-            unit_amount: 5000,
-            recurring: {
-              interval: "month",
-            },
+          {
+            price: data?.priceId,
+            quantity: 1,
           },
-          quantity: 1,
-        },
-      ],
+        ],
       metadata: {
         userId,
       },
