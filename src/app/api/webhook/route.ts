@@ -58,13 +58,10 @@ export async function POST(req: Request) {
   // customer.subscription.updated
 
   if (event.type === "customer.subscription.updated") {
-    console.log("****")
-    console.log(event.data.object.metadata, event.data.object?.plan, event.data.object.current_period_end)
-    console.log("****")
 
     const subscriptionId = event.data.object.id
     const metadata = event.data.object.metadata
-    const stripePriceId = event.data.object?.plan?.id
+    const stripePriceId = event.data.object.items.data[0].price?.id
     const current_period_end = event.data.object.current_period_end
     // const subscription = await stripe.subscriptions.retrieve(
     //   session.subscription as string
@@ -74,7 +71,6 @@ export async function POST(req: Request) {
       return new NextResponse("no userid", { status: 400 });
     }
 
-    console.log("updating sub!!!!")
     await db
       .update(userSubscriptions)
       .set({
